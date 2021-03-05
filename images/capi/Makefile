@@ -25,6 +25,12 @@ export DOCKER_CLI_EXPERIMENTAL := enabled
 
 export IB_VERSION ?= $(shell git describe --dirty)
 
+export RESOURCE_GROUP_NAME=cluster-api-images
+export AZURE_LOCATION=southcentralus
+export STORAGE_ACCOUNT_NAME=flatcarimages
+
+
+
 ## --------------------------------------
 ## Help
 ## --------------------------------------
@@ -186,7 +192,7 @@ COMMON_WINDOWS_VAR_FILES :=	packer/config/kubernetes.json \
 					packer/config/windows/ansible-args-windows.json \
 					packer/config/windows/common.json \
 					packer/config/windows/cloudbase-init.json \
-					packer/config/goss-args.json 
+					packer/config/goss-args.json
 
 # Initialize a list of flags to pass to Packer. This includes any existing flags
 # specified by PACKER_FLAGS, as well as prefixing the list with the variable
@@ -239,6 +245,10 @@ GCE_BUILD_NAMES			   ?= gce-ubuntu-1804 ## gce-ubuntu-2004
 AZURE_BUILD_VHD_NAMES	   ?= azure-vhd-ubuntu-1804 azure-vhd-ubuntu-2004 azure-vhd-centos-7 azure-vhd-windows-2019 azure-vhd-windows-2004
 AZURE_BUILD_SIG_NAMES	   ?= azure-sig-ubuntu-1804 azure-sig-ubuntu-2004 azure-sig-centos-7 azure-sig-windows-2019 azure-sig-windows-2004
 AZURE_BUILD_SIG_GEN2_NAMES ?= azure-sig-ubuntu-1804-gen2 azure-sig-ubuntu-2004-gen2 azure-sig-centos7-gen2
+AMI_BUILD_NAMES			?=	ami-centos-7 ami-ubuntu-1804 ami-ubuntu-2004 ami-amazon-2 ami-flatcar ami-windows-2019 ami-windows-2004
+GCE_BUILD_NAMES			?=	gce-ubuntu-1804 ## gce-ubuntu-2004
+AZURE_BUILD_VHD_NAMES	?=	azure-vhd-ubuntu-1804 azure-vhd-ubuntu-2004 azure-vhd-centos-7 azure-vhd-windows-2019 azure-vhd-windows-2004 azure-vhd-flatcar
+AZURE_BUILD_SIG_NAMES	?=	azure-sig-ubuntu-1804 azure-sig-ubuntu-2004 azure-sig-centos-7 azure-sig-windows-2019 azure-sig-windows-2004 azure-sig-flatcar
 
 DO_BUILD_NAMES 			?=	do-centos-7 do-ubuntu-1804 do-ubuntu-2004
 
@@ -348,6 +358,11 @@ $(GCE_VALIDATE_TARGETS): deps-gce
 .PHONY: $(AZURE_BUILD_VHD_TARGETS)
 $(AZURE_BUILD_VHD_TARGETS): deps-azure
 	. $(abspath packer/azure/scripts/init-vhd.sh) && packer build $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS)) -var-file="$(abspath packer/azure/azure-config.json)" -var-file="$(abspath packer/azure/azure-vhd.json)" -var-file="$(abspath packer/azure/$(subst build-azure-vhd-,,$@).json)" -only="$(subst build-azure-,,$@)" $(ABSOLUTE_PACKER_VAR_FILES) packer/azure/packer$(findstring -windows,$@).json
+
+
+.PHONY: build-flatcar-azure
+build-flatcar-azure: deps-azure
+	$(abspath packer/azure/scripts/init-vhd.sh) && packer build $(if $(findstring windows,$@),$(PACKER_WINDOWS_NODE_FLAGS),$(PACKER_NODE_FLAGS)) -var-file="$(abspath packer/azure/azure-config.json)" -var-file="$(abspath packer/azure/azure-vhd.json)" -var-file="$(abspath packer/azure/flatcar.json)"  $(ABSOLUTE_PACKER_VAR_FILES)  -only=sig-flatcar -on-error=ask  packer/azure/packer-flatcar.json
 
 .PHONY: $(AZURE_VALIDATE_VHD_TARGETS)
 $(AZURE_VALIDATE_VHD_TARGETS): deps-azure
